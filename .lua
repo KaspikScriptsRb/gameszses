@@ -301,21 +301,30 @@ function GamesenseUI:CreateTab(options)
     contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- Align elements left
     contentLayout.Parent = contentFrame
 
-    -- 2. Create Tab Button (CHANGED BACK TO TextButton)
-    local tabButton = Instance.new("TextButton") -- Changed back
+    -- 2. Create Tab Button (BACK TO TextButton, FIXED SIZE)
+    local tabButton = Instance.new("TextButton")
     tabButton.Name = tabName .. "_Button"
-    tabButton.Text = tabName -- Use Name for text
-    tabButton.Size = UDim2.new(1, -PADDING * 2, 0, 30) -- Adjusted size for text
+    tabButton.Text = tabName
+    local tabButtonSize = 35 -- Fixed size for square-ish text tabs
+    tabButton.Size = UDim2.new(0, tabButtonSize, 0, tabButtonSize)
     -- Position handled by layout
-    tabButton.BackgroundColor3 = Color3.new(1, 0, 0) -- DEBUG: Bright Red Background
-    tabButton.BorderSizePixel = 1 -- DEBUG: Add border to see edges
-    tabButton.BorderColor3 = Color3.new(1,1,0) -- DEBUG: Yellow Border
-    tabButton.TextColor3 = Color3.new(1, 1, 1) -- DEBUG: White Text
+    tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
+    tabButton.BorderSizePixel = 0 -- Use UIStroke instead
+    tabButton.TextColor3 = COLORS.TextDisabled -- Inactive text color
     tabButton.Font = FONTS.Primary
-    tabButton.TextSize = 12 -- Smaller text for sidebar tabs
+    tabButton.TextSize = 10 -- Smaller text for small tabs
+    tabButton.TextWrapped = true -- Wrap text if needed
     tabButton.AutoButtonColor = false
     tabButton.LayoutOrder = layoutOrder
-    tabButton.ZIndex = window._sidebarFrame.ZIndex + 2 -- DEBUG: Increase ZIndex just in case
+    tabButton.ZIndex = window._sidebarFrame.ZIndex + 1
+
+    -- Add subtle stroke
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Color = COLORS.Border
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = tabButton
+
     tabButton.Parent = window._sidebarFrame
 
     -- 3. Store Tab Info
@@ -438,9 +447,16 @@ function GamesenseUI:CreateToggle(options)
     checkbox.Size = UDim2.new(0, checkboxSize, 0, checkboxSize)
     checkbox.Position = UDim2.new(0, PADDING, 0.5, -checkboxSize / 2) -- Add padding
     checkbox.BackgroundColor3 = COLORS.Frame
-    checkbox.BorderSizePixel = BORDER_SIZE
+    checkbox.BorderSizePixel = 0 -- Use UIStroke
     checkbox.BorderColor3 = COLORS.Border
     checkbox.Parent = elementFrame
+
+    -- Add stroke to checkbox
+    local cbStroke = Instance.new("UIStroke")
+    cbStroke.Thickness = 1
+    cbStroke.Color = COLORS.Border
+    cbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    cbStroke.Parent = checkbox
 
     local checkmark = Instance.new("Frame")
     checkmark.Name = "Checkmark"
@@ -563,9 +579,16 @@ function GamesenseUI:CreateSlider(options)
     sliderBack.Size = UDim2.new(1, -PADDING, 0, SLIDER_HEIGHT) -- Add padding
     sliderBack.Position = UDim2.new(0, PADDING / 2, 0, ELEMENT_HEIGHT + 2) -- Position below labels
     sliderBack.BackgroundColor3 = COLORS.Frame
-    sliderBack.BorderSizePixel = BORDER_SIZE
+    sliderBack.BorderSizePixel = 0 -- Use UIStroke
     sliderBack.BorderColor3 = COLORS.Border
     sliderBack.Parent = elementFrame
+
+    -- Add stroke to slider background
+    local slStroke = Instance.new("UIStroke")
+    slStroke.Thickness = 1
+    slStroke.Color = COLORS.Border
+    slStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    slStroke.Parent = sliderBack
 
     local sliderProgress = Instance.new("Frame")
     sliderProgress.Name = "SliderProgress"
@@ -670,7 +693,7 @@ function GamesenseUI:CreateButton(options)
     button.Size = UDim2.new(1, -PADDING * 2, 0, ELEMENT_HEIGHT + 4) -- Slightly taller button
     button.Position = UDim2.new(0, PADDING, 0, 0)
     button.BackgroundColor3 = COLORS.Frame
-    button.BorderSizePixel = BORDER_SIZE
+    button.BorderSizePixel = 0 -- Use UIStroke
     button.BorderColor3 = COLORS.Border
     button.Font = FONTS.Primary
     button.TextColor3 = COLORS.Text
@@ -678,6 +701,14 @@ function GamesenseUI:CreateButton(options)
     button.TextSize = 12
     button.AutoButtonColor = true -- Use default hover/pressed effect for now
     button.LayoutOrder = layoutOrder
+
+    -- Add stroke to button
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Thickness = 1
+    btnStroke.Color = COLORS.Border
+    btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    btnStroke.Parent = button
+
     button.Parent = tab._tabData.Content
 
     button.MouseButton1Click:Connect(function()
@@ -736,7 +767,7 @@ function GamesenseUI:CreateTextbox(options)
     textBox.Size = UDim2.new(1, -PADDING, 0, ELEMENT_HEIGHT + 2)
     textBox.Position = UDim2.new(0, PADDING / 2, 0, ELEMENT_HEIGHT * 0.6 + 2)
     textBox.BackgroundColor3 = COLORS.Frame
-    textBox.BorderSizePixel = BORDER_SIZE
+    textBox.BorderSizePixel = 0 -- Use UIStroke
     textBox.BorderColor3 = COLORS.Border
     textBox.Font = FONTS.Secondary
     textBox.TextColor3 = COLORS.Text
@@ -746,6 +777,13 @@ function GamesenseUI:CreateTextbox(options)
     textBox.TextSize = 12
     textBox.ClearTextOnFocus = false -- Don't clear when clicking in
     textBox.Parent = elementFrame
+
+    -- Add stroke to textbox
+    local tbStroke = Instance.new("UIStroke")
+    tbStroke.Thickness = 1
+    tbStroke.Color = COLORS.Border
+    tbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    tbStroke.Parent = textBox
 
     local textboxObject = {}
     textboxObject.Value = currentValue
@@ -836,13 +874,20 @@ function GamesenseUI:CreateKeybind(options)
     keybindButton.Size = UDim2.new(0.4, -PADDING, 1, 0) -- Adjust width
     keybindButton.Position = UDim2.new(0.6, PADDING / 2, 0, 0)
     keybindButton.BackgroundColor3 = COLORS.Frame
-    keybindButton.BorderSizePixel = BORDER_SIZE
+    keybindButton.BorderSizePixel = 0 -- Use UIStroke
     keybindButton.BorderColor3 = COLORS.Border
     keybindButton.Font = FONTS.Secondary
     keybindButton.TextColor3 = COLORS.TextDisabled
     keybindButton.Text = "[" .. (currentKeyCode and currentKeyCode.Name or currentKeybind) .. "]"
     keybindButton.TextSize = 11
     keybindButton.Parent = elementFrame
+
+    -- Add stroke to keybind button
+    local kbStroke = Instance.new("UIStroke")
+    kbStroke.Thickness = 1
+    kbStroke.Color = COLORS.Border
+    kbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    kbStroke.Parent = keybindButton
 
     local keybindObject = {}
     keybindObject.KeyCode = currentKeyCode
