@@ -12,7 +12,7 @@ local COLORS = {
     Accent = Color3.fromRGB(170, 255, 0),        -- Lime Green Accent
     Text = Color3.fromRGB(240, 240, 240),       -- Light Text
     TextDisabled = Color3.fromRGB(100, 100, 100), -- Disabled Text
-    Border = Color3.fromRGB(45, 45, 45)          -- Border Color
+    Border = Color3.fromRGB(40, 40, 40)          -- Slightly darker Border Color
 }
 
 local FONTS = {
@@ -23,32 +23,22 @@ local FONTS = {
 local PADDING = 5
 local TITLE_BAR_HEIGHT = 25
 local BORDER_SIZE = 1
+local ELEMENT_SPACING = 8 -- Vertical spacing between elements in a list
 
--- Helper function to create a styled frame
+-- Helper function to create a styled frame (Removed border creation here, handled individually)
 local function createStyledFrame(parent, name, size, position)
     local frame = Instance.new("Frame")
     frame.Name = name
-    frame.BackgroundColor3 = COLORS.Frame
-    frame.BorderSizePixel = 0
+    frame.BackgroundColor3 = COLORS.Frame -- Use element background as base for main frames too
+    frame.BorderSizePixel = 0 -- Set to 0 initially, borders added manually where needed
     frame.Size = size
     frame.Position = position
     frame.Parent = parent
-
-    -- Add border effect (inner frame)
-    local border = Instance.new("Frame")
-    border.Name = "Border"
-    border.BackgroundColor3 = COLORS.Border
-    border.BorderSizePixel = 0
-    border.Size = UDim2.new(1, BORDER_SIZE * 2, 1, BORDER_SIZE * 2)
-    border.Position = UDim2.new(0, -BORDER_SIZE, 0, -BORDER_SIZE)
-    border.ZIndex = frame.ZIndex - 1
-    border.Parent = frame
-
-    return frame, border
+    return frame
 end
 
--- Window dragging logic
-local function enableDragging(guiObject)
+-- Window dragging logic (MODIFIED TO MOVE mainFrame)
+local function enableDragging(guiObject, mainFrame)
     local dragging = false
     local dragInput = nil
     local dragStart = nil
@@ -56,13 +46,15 @@ local function enableDragging(guiObject)
 
     guiObject.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            print("Drag InputBegan on TitleBar!") -- DEBUG PRINT
+            -- print("Drag InputBegan on TitleBar!") -- Keep for debugging if needed
             dragging = true
             dragStart = input.Position
-            startPos = guiObject.Position
-            input.Changed:Connect(function()
+            startPos = mainFrame.Position -- Get the main frame's position
+            local conn
+            conn = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
+                    conn:Disconnect() -- Disconnect the changed event when input ends
                 end
             end)
         end
@@ -74,10 +66,25 @@ local function enableDragging(guiObject)
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(input)
+    -- Listen globally for mouse movement when dragging
+    local moveConn
+    moveConn = UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            -- Update the MAIN FRAME's position
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        elseif not dragging and moveConn then -- Optimization: disconnect if not dragging (might need adjustment)
+            -- Be careful with disconnecting this, might be needed by other things.
+            -- Consider disconnecting only when the UI is closed.
+            -- For now, let's keep it connected.
+            -- moveConn:Disconnect()
+        end
+    end)
+
+    -- Add cleanup for the connection when the guiObject is destroyed (important!)
+    guiObject.Destroying:Connect(function()
+        if moveConn then
+            moveConn:Disconnect()
         end
     end)
 end
@@ -105,10 +112,19 @@ function GamesenseUI:CreateWindow(options)
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Use Sibling for easier layering
 
-    -- 2. Create Main Window Frame
-    local mainFrame, mainBorder = createStyledFrame(screenGui, "MainFrame", windowSize, windowPosition)
-    mainFrame.BackgroundColor3 = COLORS.Background
+    -- 2. Create Main Window Frame (Using updated helper)
+    local mainFrame = createStyledFrame(screenGui, "MainFrame", windowSize, windowPosition)
+    mainFrame.BackgroundColor3 = COLORS.Background -- Override background color
     mainFrame.ClipsDescendants = true -- Important for containing elements
+    -- Add the main outer border
+    local mainBorder = Instance.new("Frame")
+    mainBorder.Name = "OuterBorder"
+    mainBorder.BackgroundColor3 = COLORS.Border
+    mainBorder.BorderSizePixel = 0
+    mainBorder.Size = UDim2.new(1, BORDER_SIZE * 2, 1, BORDER_SIZE * 2)
+    mainBorder.Position = UDim2.new(0, -BORDER_SIZE, 0, -BORDER_SIZE)
+    mainBorder.ZIndex = mainFrame.ZIndex - 1
+    mainBorder.Parent = mainFrame
 
     -- 3. Create Title Bar
     local titleBar = Instance.new("Frame")
@@ -148,8 +164,8 @@ function GamesenseUI:CreateWindow(options)
     titleLabel.ZIndex = titleBar.ZIndex + 1
     titleLabel.Parent = titleBar
 
-    -- 4. Enable Dragging on Title Bar
-    enableDragging(titleBar)
+    -- 4. Enable Dragging (Pass mainFrame now)
+    enableDragging(titleBar, mainFrame)
 
     -- 5. Create Left Sidebar for Tabs
     local sidebarFrame = Instance.new("Frame")
@@ -175,8 +191,8 @@ function GamesenseUI:CreateWindow(options)
     local sidebarLayout = Instance.new("UIListLayout")
     sidebarLayout.FillDirection = Enum.FillDirection.Vertical
     sidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    sidebarLayout.Padding = UDim.new(0, PADDING) -- Padding between tabs
-    sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center -- Center icons/buttons horizontally
+    sidebarLayout.Padding = UDim.new(0, ELEMENT_SPACING) -- Use consistent spacing
+    sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- Align elements left
     sidebarLayout.Parent = sidebarFrame
 
     -- 6. Create Content Container (Adjusted for Sidebar)
@@ -247,18 +263,20 @@ function GamesenseUI:CreateTab(options)
     contentFrame.LayoutOrder = layoutOrder -- Match button order
     contentFrame.Parent = window._contentContainer
 
-    -- Add layout
+    -- Add layout for elements within tab
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.FillDirection = Enum.FillDirection.Vertical
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Padding = UDim.new(0, PADDING * 2) -- More padding for content
+    contentLayout.Padding = UDim.new(0, ELEMENT_SPACING) -- Use consistent spacing
+    contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- Align elements left
     contentLayout.Parent = contentFrame
 
     -- 2. Create Tab Button
     local tabButton = Instance.new("TextButton")
     tabButton.Name = tabName .. "_Button"
     tabButton.Text = tabName -- Use text for now
-    tabButton.Size = UDim2.new(0, window._sidebarFrame.Size.X.Offset - PADDING * 2, 0, 40) -- Example size
+    tabButton.Size = UDim2.new(1, -PADDING * 2, 0, 40) -- Adjust width to fill sidebar better
+    tabButton.Position = UDim2.new(0, PADDING, 0, 0)
     tabButton.BackgroundColor3 = COLORS.Frame
     tabButton.BorderSizePixel = 0
     tabButton.TextColor3 = COLORS.TextDisabled -- Default color (inactive)
@@ -306,33 +324,29 @@ function GamesenseUI:CreateSection(options)
     local sectionName = options.Name or "Section"
     local layoutOrder = options.Order -- Use LayoutOrder from the tab's contentLayout
 
-    -- Create a container Frame for the section title and its elements
-    -- Note: We might not need a dedicated frame *for elements* if the tab's main layout handles order.
-    -- Let's start with just the title label.
-
     -- Create the Title Label for the section
     local sectionTitle = Instance.new("TextLabel")
     sectionTitle.Name = sectionName .. "_Title"
-    sectionTitle.Text = string.upper(sectionName) -- Uppercase like in Gamesense
-    sectionTitle.Size = UDim2.new(1, 0, 0, 20) -- Height for the title
+    sectionTitle.Text = " " .. string.upper(sectionName) -- Add space before title
+    sectionTitle.Size = UDim2.new(1, 0, 0, 18) -- Slightly smaller height
     sectionTitle.BackgroundColor3 = COLORS.Background -- Match tab background
     sectionTitle.BackgroundTransparency = 1 -- Transparent background
     sectionTitle.BorderSizePixel = 0
     sectionTitle.TextColor3 = COLORS.Text -- Standard text color
     sectionTitle.Font = FONTS.Primary -- Use primary font for titles
-    sectionTitle.TextSize = 12 -- Slightly smaller for section titles
+    sectionTitle.TextSize = 11 -- Smaller font size
     sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
     sectionTitle.TextYAlignment = Enum.TextYAlignment.Center
     sectionTitle.LayoutOrder = layoutOrder or (#tab._tabData.Layout.Parent:GetChildren() + 1) -- Position it correctly
     sectionTitle.Parent = tab._tabData.Content -- Add directly to the tab's content frame
 
-    -- Add a top border/line above the text for separation (optional but common)
+    -- Separator Line (below title now)
     local line = Instance.new("Frame")
     line.Name = "SeparatorLine"
     line.BackgroundColor3 = COLORS.Border
     line.BorderSizePixel = 0
     line.Size = UDim2.new(1, 0, 0, BORDER_SIZE)
-    line.Position = UDim2.new(0, 0, 0, -PADDING / 2) -- Position slightly above the text using padding
+    line.Position = UDim2.new(0, 0, 1, PADDING / 2) -- Position below text
     line.ZIndex = sectionTitle.ZIndex - 1
     line.Parent = sectionTitle -- Parent to title to move with it
 
@@ -348,7 +362,7 @@ end
 -- ================== Element Creation Methods ==================
 -- ============================================================
 
-local ELEMENT_HEIGHT = 20 -- Standard height for most elements like toggles, buttons
+local ELEMENT_HEIGHT = 18 -- Reduced height for denser look
 
 --[[
     Creates a Toggle (Checkbox) element.
@@ -374,11 +388,11 @@ function GamesenseUI:CreateToggle(options)
     elementFrame.LayoutOrder = layoutOrder
     elementFrame.Parent = tab._tabData.Content
 
-    local checkboxSize = ELEMENT_HEIGHT * 0.6
+    local checkboxSize = ELEMENT_HEIGHT * 0.7
     local checkbox = Instance.new("Frame")
     checkbox.Name = "Checkbox"
     checkbox.Size = UDim2.new(0, checkboxSize, 0, checkboxSize)
-    checkbox.Position = UDim2.new(0, 0, 0.5, -checkboxSize / 2) -- Align vertically center
+    checkbox.Position = UDim2.new(0, PADDING, 0.5, -checkboxSize / 2) -- Add padding
     checkbox.BackgroundColor3 = COLORS.Frame
     checkbox.BorderSizePixel = BORDER_SIZE
     checkbox.BorderColor3 = COLORS.Border
@@ -395,15 +409,15 @@ function GamesenseUI:CreateToggle(options)
 
     local label = Instance.new("TextLabel")
     label.Name = "Label"
-    label.Size = UDim2.new(1, -(checkboxSize + PADDING * 2), 1, 0)
-    label.Position = UDim2.new(0, checkboxSize + PADDING, 0, 0)
+    label.Size = UDim2.new(1, -(checkboxSize + PADDING * 3), 1, 0)
+    label.Position = UDim2.new(0, checkboxSize + PADDING * 2, 0, 0) -- More padding
     label.BackgroundColor3 = COLORS.Background
     label.BackgroundTransparency = 1
     label.BorderSizePixel = 0
     label.Font = FONTS.Secondary
     label.TextColor3 = COLORS.Text
     label.Text = name
-    label.TextSize = 14
+    label.TextSize = 12
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Parent = elementFrame
@@ -461,10 +475,10 @@ function GamesenseUI:CreateSlider(options)
     local layoutOrder = options.Order or (#tab._tabData.Layout.Parent:GetChildren() + 1)
     local callback = options.Callback or function() end
 
-    local SLIDER_HEIGHT = 10
+    local SLIDER_HEIGHT = 6 -- Thinner slider bar
     local elementFrame = Instance.new("Frame")
     elementFrame.Name = name .. "_Frame"
-    elementFrame.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT * 1.5) -- Slightly taller for label + slider
+    elementFrame.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT * 1.8) -- Adjust height for spacing
     elementFrame.BackgroundColor3 = COLORS.Background
     elementFrame.BackgroundTransparency = 1
     elementFrame.BorderSizePixel = 0
@@ -473,7 +487,7 @@ function GamesenseUI:CreateSlider(options)
 
     local label = Instance.new("TextLabel")
     label.Name = "Label"
-    label.Size = UDim2.new(0.5, -PADDING, 0, ELEMENT_HEIGHT) -- Half width for label
+    label.Size = UDim2.new(0.6, 0, 0, ELEMENT_HEIGHT)
     label.Position = UDim2.new(0, 0, 0, 0)
     label.BackgroundColor3 = COLORS.Background
     label.BackgroundTransparency = 1
@@ -481,29 +495,29 @@ function GamesenseUI:CreateSlider(options)
     label.Font = FONTS.Secondary
     label.TextColor3 = COLORS.Text
     label.Text = name
-    label.TextSize = 14
+    label.TextSize = 12
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Parent = elementFrame
 
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Name = "ValueLabel"
-    valueLabel.Size = UDim2.new(0.5, -PADDING, 0, ELEMENT_HEIGHT) -- Half width for value
-    valueLabel.Position = UDim2.new(0.5, PADDING, 0, 0)
+    valueLabel.Size = UDim2.new(0.4, -PADDING, 0, ELEMENT_HEIGHT)
+    valueLabel.Position = UDim2.new(0.6, PADDING, 0, 0)
     valueLabel.BackgroundColor3 = COLORS.Background
     valueLabel.BackgroundTransparency = 1
     valueLabel.BorderSizePixel = 0
     valueLabel.Font = FONTS.Secondary
     valueLabel.TextColor3 = COLORS.TextDisabled
-    valueLabel.TextSize = 14
+    valueLabel.TextSize = 12
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     valueLabel.TextYAlignment = Enum.TextYAlignment.Center
     valueLabel.Parent = elementFrame
 
     local sliderBack = Instance.new("Frame")
     sliderBack.Name = "SliderBack"
-    sliderBack.Size = UDim2.new(1, 0, 0, SLIDER_HEIGHT)
-    sliderBack.Position = UDim2.new(0, 0, 0, ELEMENT_HEIGHT) -- Below labels
+    sliderBack.Size = UDim2.new(1, -PADDING, 0, SLIDER_HEIGHT) -- Add padding
+    sliderBack.Position = UDim2.new(0, PADDING / 2, 0, ELEMENT_HEIGHT + 2) -- Position below labels
     sliderBack.BackgroundColor3 = COLORS.Frame
     sliderBack.BorderSizePixel = BORDER_SIZE
     sliderBack.BorderColor3 = COLORS.Border
@@ -609,14 +623,15 @@ function GamesenseUI:CreateButton(options)
 
     local button = Instance.new("TextButton")
     button.Name = name .. "_Button"
-    button.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT)
+    button.Size = UDim2.new(1, -PADDING * 2, 0, ELEMENT_HEIGHT + 4) -- Slightly taller button
+    button.Position = UDim2.new(0, PADDING, 0, 0)
     button.BackgroundColor3 = COLORS.Frame
     button.BorderSizePixel = BORDER_SIZE
     button.BorderColor3 = COLORS.Border
     button.Font = FONTS.Primary
     button.TextColor3 = COLORS.Text
     button.Text = name
-    button.TextSize = 14
+    button.TextSize = 12
     button.AutoButtonColor = true -- Use default hover/pressed effect for now
     button.LayoutOrder = layoutOrder
     button.Parent = tab._tabData.Content
@@ -652,30 +667,30 @@ function GamesenseUI:CreateTextbox(options)
 
     local elementFrame = Instance.new("Frame")
     elementFrame.Name = name .. "_Frame"
-    elementFrame.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT * 1.5) -- Label + Textbox
+    elementFrame.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT * 2) -- Taller for label+box+spacing
     elementFrame.BackgroundColor3 = COLORS.Background
     elementFrame.BackgroundTransparency = 1
     elementFrame.BorderSizePixel = 0
     elementFrame.LayoutOrder = layoutOrder
     elementFrame.Parent = tab._tabData.Content
 
-    local label = Instance.new("TextLabel") -- Label above the textbox
+    local label = Instance.new("TextLabel")
     label.Name = "Label"
-    label.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT * 0.6)
-    label.Position = UDim2.new(0, 0, 0, 0)
+    label.Size = UDim2.new(1, -PADDING, 0, ELEMENT_HEIGHT * 0.6)
+    label.Position = UDim2.new(0, PADDING / 2, 0, 0)
     label.BackgroundTransparency = 1
     label.Font = FONTS.Secondary
     label.TextColor3 = COLORS.Text
     label.Text = name
-    label.TextSize = 12
+    label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextYAlignment = Enum.TextYAlignment.Bottom
     label.Parent = elementFrame
 
     local textBox = Instance.new("TextBox")
     textBox.Name = "InputBox"
-    textBox.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT)
-    textBox.Position = UDim2.new(0, 0, 0, ELEMENT_HEIGHT * 0.6 + 2) -- Position below label
+    textBox.Size = UDim2.new(1, -PADDING, 0, ELEMENT_HEIGHT + 2)
+    textBox.Position = UDim2.new(0, PADDING / 2, 0, ELEMENT_HEIGHT * 0.6 + 2)
     textBox.BackgroundColor3 = COLORS.Frame
     textBox.BorderSizePixel = BORDER_SIZE
     textBox.BorderColor3 = COLORS.Border
@@ -684,7 +699,7 @@ function GamesenseUI:CreateTextbox(options)
     textBox.Text = currentValue
     textBox.PlaceholderText = placeholder
     textBox.PlaceholderColor3 = COLORS.TextDisabled
-    textBox.TextSize = 14
+    textBox.TextSize = 12
     textBox.ClearTextOnFocus = false -- Don't clear when clicking in
     textBox.Parent = elementFrame
 
