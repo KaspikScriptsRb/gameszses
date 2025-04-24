@@ -225,7 +225,7 @@ function GamesenseUI:CreateWindow(options)
 end
 
 --[[
-    Creates a new Tab button in the sidebar and its corresponding content frame.
+    Creates a new Tab button/icon in the sidebar and its corresponding content frame.
     Args:
         options (table): { Name (string), Icon (string, optional), Order (number, optional) }
     Returns:
@@ -234,20 +234,25 @@ end
 function GamesenseUI:CreateTab(options)
     local window = self
     options = options or {}
-    local tabName = options.Name or "Tab"
-    local tabIcon = options.Icon
+    -- Tab Name is now mostly for internal reference, Icon is primary visual
+    local tabName = options.Name or "Tab" .. (#window._tabs + 1)
+    local iconId = options.Icon or "4483362458" -- Default Icon ID
     local layoutOrder = options.Order or #window._tabs + 1
 
-    -- Internal helper function to activate a tab (REMAINS THE SAME)
+    -- Internal helper function to activate a tab
     local function activateTabLogic(tabDataToActivate)
-        if not tabDataToActivate then return end -- Safety check
+        if not tabDataToActivate then return end
         if window._activeTab then
-            window._activeTab.Button.TextColor3 = COLORS.TextDisabled
+            -- Deactivate previous: Reset background color
             window._activeTab.Button.BackgroundColor3 = COLORS.Frame
+            -- Optionally change ImageColor3 for inactive state if needed
+            -- window._activeTab.Button.ImageColor3 = COLORS.TextDisabled
             window._activeTab.Content.Visible = false
         end
-        tabDataToActivate.Button.TextColor3 = COLORS.Accent
-        tabDataToActivate.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        -- Activate this tab: Set accent background color
+        tabDataToActivate.Button.BackgroundColor3 = COLORS.Border -- Use border color for active background
+        -- Optionally change ImageColor3 for active state
+        -- tabDataToActivate.Button.ImageColor3 = COLORS.Accent
         tabDataToActivate.Content.Visible = true
         window._activeTab = tabDataToActivate
     end
@@ -271,18 +276,17 @@ function GamesenseUI:CreateTab(options)
     contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- Align elements left
     contentLayout.Parent = contentFrame
 
-    -- 2. Create Tab Button
-    local tabButton = Instance.new("TextButton")
+    -- 2. Create Tab Button (CHANGED TO ImageButton)
+    local tabButton = Instance.new("ImageButton")
     tabButton.Name = tabName .. "_Button"
-    tabButton.Text = tabName -- Use text for now
-    tabButton.Size = UDim2.new(1, -PADDING * 2, 0, 40) -- Adjust width to fill sidebar better
+    tabButton.Size = UDim2.new(1, -PADDING * 2, 0, window._sidebarFrame.Size.X.Offset - PADDING * 2) -- Make it square-ish
     tabButton.Position = UDim2.new(0, PADDING, 0, 0)
-    tabButton.BackgroundColor3 = COLORS.Frame
+    tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
     tabButton.BorderSizePixel = 0
-    tabButton.TextColor3 = COLORS.TextDisabled -- Default color (inactive)
-    tabButton.Font = FONTS.Primary
-    tabButton.TextSize = 14
-    tabButton.AutoButtonColor = false -- Manual color changes
+    tabButton.Image = "rbxassetid://" .. tostring(iconId)
+    -- tabButton.ImageColor3 = COLORS.TextDisabled -- Default image color (can be white/grey)
+    tabButton.ScaleType = Enum.ScaleType.Fit -- Fit the icon within the button
+    tabButton.AutoButtonColor = false
     tabButton.LayoutOrder = layoutOrder
     tabButton.ZIndex = window._sidebarFrame.ZIndex + 1
     tabButton.Parent = window._sidebarFrame
@@ -299,7 +303,7 @@ function GamesenseUI:CreateTab(options)
 
     -- 4. Add Click Logic
     tabButton.MouseButton1Click:Connect(function()
-        activateTabLogic(tabData) -- Clicking works fine
+        activateTabLogic(tabData)
     end)
 
     -- Return a 'tab' object
@@ -747,6 +751,129 @@ function GamesenseUI:CreateTextbox(options)
 end
 GamesenseUI.CreateTextbox = GamesenseUI.CreateTextbox
 
+--[[ Creates a Keybind element. ]]
+function GamesenseUI:CreateKeybind(options)
+    local tab = self
+    options = options or {}
+    local name = options.Name or "Keybind"
+    local currentKeybind = options.CurrentKeybind or "None" -- Initial display text
+    local layoutOrder = options.Order or (#tab._tabData.Content:GetChildren() + 1)
+    local callback = options.Callback or function() end
+
+    local currentKeyCode = nil -- Store the actual KeyCode enum
+    pcall(function()
+        if type(currentKeybind) == "string" then
+           currentKeyCode = Enum.KeyCode[currentKeybind]
+        elseif typeof(currentKeybind) == "EnumItem" and currentKeybind.EnumType == Enum.KeyCode then
+            currentKeyCode = currentKeybind
+        end
+    end)
+
+    local elementFrame = Instance.new("Frame")
+    elementFrame.Name = name .. "_Frame"
+    elementFrame.Size = UDim2.new(1, 0, 0, ELEMENT_HEIGHT)
+    elementFrame.BackgroundColor3 = COLORS.Background
+    elementFrame.BackgroundTransparency = 1
+    elementFrame.BorderSizePixel = 0
+    elementFrame.LayoutOrder = layoutOrder
+    elementFrame.Parent = tab._tabData.Content
+
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(0.6, -PADDING, 1, 0) -- Adjust width as needed
+    label.Position = UDim2.new(0, PADDING / 2, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Font = FONTS.Secondary
+    label.TextColor3 = COLORS.Text
+    label.Text = name
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Parent = elementFrame
+
+    local keybindButton = Instance.new("TextButton")
+    keybindButton.Name = "KeybindButton"
+    keybindButton.Size = UDim2.new(0.4, -PADDING, 1, 0) -- Adjust width
+    keybindButton.Position = UDim2.new(0.6, PADDING / 2, 0, 0)
+    keybindButton.BackgroundColor3 = COLORS.Frame
+    keybindButton.BorderSizePixel = BORDER_SIZE
+    keybindButton.BorderColor3 = COLORS.Border
+    keybindButton.Font = FONTS.Secondary
+    keybindButton.TextColor3 = COLORS.TextDisabled
+    keybindButton.Text = "[" .. (currentKeyCode and currentKeyCode.Name or currentKeybind) .. "]"
+    keybindButton.TextSize = 11
+    keybindButton.Parent = elementFrame
+
+    local keybindObject = {}
+    keybindObject.KeyCode = currentKeyCode
+    local isBinding = false
+    local inputConn = nil
+
+    local function updateButtonText()
+        keybindButton.Text = "[" .. (keybindObject.KeyCode and keybindObject.KeyCode.Name or "None") .. "]"
+        keybindButton.TextColor3 = COLORS.TextDisabled
+    end
+
+    local function stopBinding()
+        if inputConn then inputConn:Disconnect() inputConn = nil end
+        isBinding = false
+        updateButtonText()
+    end
+
+    function keybindObject:SetKeybind(keyCodeEnum)
+        if typeof(keyCodeEnum) == "EnumItem" and keyCodeEnum.EnumType == Enum.KeyCode then
+            self.KeyCode = keyCodeEnum
+            updateButtonText()
+            pcall(callback, self.KeyCode)
+        elseif keyCodeEnum == nil or tostring(keyCodeEnum):lower() == "none" then
+             self.KeyCode = nil
+             updateButtonText()
+             pcall(callback, self.KeyCode)
+        end
+    end
+
+    function keybindObject:GetKeybind()
+        return self.KeyCode
+    end
+
+    keybindButton.MouseButton1Click:Connect(function()
+        if isBinding then
+            stopBinding()
+        else
+            isBinding = true
+            keybindButton.Text = "[...]"
+            keybindButton.TextColor3 = COLORS.Text
+
+            -- Disconnect previous connection if somehow exists
+            if inputConn then inputConn:Disconnect() end
+
+            inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+                if gameProcessedEvent then return end -- Ignore if game handled it (e.g., typing in chat)
+
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    if input.KeyCode == Enum.KeyCode.Escape then -- Cancel on Escape
+                        stopBinding()
+                    else
+                        keybindObject:SetKeybind(input.KeyCode)
+                        stopBinding()
+                    end
+                elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton3 then
+                    -- Convert MouseButton UserInputType to approximate KeyCode for display consistency if desired
+                    -- Or just store the UserInputType itself
+                    keybindObject.KeyCode = input.KeyCode -- KeyCode exists for mouse buttons too
+                    updateButtonText() -- Update text immediately
+                     pcall(callback, keybindObject.KeyCode)
+                    stopBinding()
+                end
+            end)
+        end
+    end)
+
+    tab._tabData.Elements[name] = keybindObject
+    return keybindObject
+end
+GamesenseUI.CreateKeybind = GamesenseUI.CreateKeybind
+
 -- TODO: Implement CreateColorPicker, CreateDropdown, Notify
 
 -- ============================================================
@@ -797,5 +924,6 @@ GamesenseUI.CreateSlider = GamesenseUI.CreateSlider
 GamesenseUI.CreateButton = GamesenseUI.CreateButton
 GamesenseUI.CreateTextbox = GamesenseUI.CreateTextbox
 GamesenseUI.SetActiveTab = GamesenseUI.SetActiveTab -- Assign the new method
+GamesenseUI.CreateKeybind = GamesenseUI.CreateKeybind -- Assign the new method
 
 return GamesenseUI
