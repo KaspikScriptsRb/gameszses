@@ -100,6 +100,7 @@ local function _activateTabLogic(window, tabDataToActivate)
         -- Deactivate previous
         if window._activeTab.Button and window._activeTab.Button.Parent then
             window._activeTab.Button.BackgroundColor3 = COLORS.Frame
+            window._activeTab.Button.TextColor3 = COLORS.TextDisabled -- Restore TextColor change
         end
         if window._activeTab.Content and window._activeTab.Content.Parent then
              window._activeTab.Content.Visible = false
@@ -109,6 +110,7 @@ local function _activateTabLogic(window, tabDataToActivate)
     -- Activate new
     if tabDataToActivate.Button and tabDataToActivate.Button.Parent then
         tabDataToActivate.Button.BackgroundColor3 = COLORS.Border
+        tabDataToActivate.Button.TextColor3 = COLORS.Accent -- Restore TextColor change
     end
     if tabDataToActivate.Content and tabDataToActivate.Content.Parent then
          tabDataToActivate.Content.Visible = true
@@ -273,10 +275,12 @@ end
 function GamesenseUI:CreateTab(options)
     local window = self
     options = options or {}
-    -- Tab Name is now mostly for internal reference, Icon is primary visual
     local tabName = options.Name or "Tab" .. (#window._tabs + 1)
-    local iconId = options.Icon or "4483362458" -- Default Icon ID
+    -- local iconId = options.Icon or "4483362458" -- No longer using Icon
     local layoutOrder = options.Order or #window._tabs + 1
+
+    -- Internal helper function reference (using the one defined outside)
+    -- local function activateTabLogic... (no longer needed here)
 
     -- 1. Create Content Frame
     local contentFrame = Instance.new("Frame")
@@ -297,17 +301,17 @@ function GamesenseUI:CreateTab(options)
     contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- Align elements left
     contentLayout.Parent = contentFrame
 
-    -- 2. Create Tab Button (CHANGED TO ImageButton)
-    local tabButton = Instance.new("ImageButton")
+    -- 2. Create Tab Button (CHANGED BACK TO TextButton)
+    local tabButton = Instance.new("TextButton") -- Changed back
     tabButton.Name = tabName .. "_Button"
-    -- FIXED SIZE for the icon button
-    local iconSize = 40 -- Define a fixed size for icons
-    tabButton.Size = UDim2.new(0, iconSize, 0, iconSize)
-    -- Position is handled by UIListLayout
+    tabButton.Text = tabName -- Use Name for text
+    tabButton.Size = UDim2.new(1, -PADDING * 2, 0, 30) -- Adjusted size for text
+    -- Position handled by layout
     tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
     tabButton.BorderSizePixel = 0
-    tabButton.Image = "rbxassetid://" .. tostring(iconId)
-    tabButton.ScaleType = Enum.ScaleType.Fit
+    tabButton.TextColor3 = COLORS.TextDisabled -- Inactive text color
+    tabButton.Font = FONTS.Primary
+    tabButton.TextSize = 12 -- Smaller text for sidebar tabs
     tabButton.AutoButtonColor = false
     tabButton.LayoutOrder = layoutOrder
     tabButton.ZIndex = window._sidebarFrame.ZIndex + 1
@@ -328,12 +332,11 @@ function GamesenseUI:CreateTab(options)
         _activateTabLogic(window, tabData) -- Call the external helper
     end)
 
-    -- Return a 'tab' object
+    -- Return tab object
     local tabObject = {}
     setmetatable(tabObject, { __index = GamesenseUI })
     tabObject._window = window
     tabObject._tabData = tabData
-
     return tabObject
 end
 
