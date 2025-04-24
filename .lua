@@ -300,7 +300,6 @@ function GamesenseUI:CreateTab(options)
     local tabButton = Instance.new("ImageButton")
     tabButton.Name = tabName .. "_Button"
     tabButton.Size = UDim2.new(1, -PADDING * 2, 0, window._sidebarFrame.Size.X.Offset - PADDING * 2) -- Make it square-ish
-    tabButton.Position = UDim2.new(0, PADDING, 0, 0)
     tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
     tabButton.BorderSizePixel = 0
     tabButton.Image = "rbxassetid://" .. tostring(iconId)
