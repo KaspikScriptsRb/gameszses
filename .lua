@@ -216,28 +216,27 @@ end
         Tab object (table) with methods like CreateSection, CreateButton, etc.
 --]]
 function GamesenseUI:CreateTab(options)
-    local window = self -- Reference to the window object the method is called on
+    local window = self
     options = options or {}
     local tabName = options.Name or "Tab"
-    local tabIcon = options.Icon -- For future use
-    local layoutOrder = options.Order or #window._tabs + 1 -- Controls vertical order
+    local tabIcon = options.Icon
+    local layoutOrder = options.Order or #window._tabs + 1
 
-    -- Helper function to activate a tab
-    local function activateTab(tabDataToActivate)
-        -- Deactivate previously active tab
+    -- Internal helper function to activate a tab (REMAINS THE SAME)
+    local function activateTabLogic(tabDataToActivate)
+        if not tabDataToActivate then return end -- Safety check
         if window._activeTab then
             window._activeTab.Button.TextColor3 = COLORS.TextDisabled
             window._activeTab.Button.BackgroundColor3 = COLORS.Frame
             window._activeTab.Content.Visible = false
         end
-        -- Activate this tab
         tabDataToActivate.Button.TextColor3 = COLORS.Accent
         tabDataToActivate.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         tabDataToActivate.Content.Visible = true
         window._activeTab = tabDataToActivate
     end
 
-    -- 1. Create Content Frame (initially hidden)
+    -- 1. Create Content Frame
     local contentFrame = Instance.new("Frame")
     contentFrame.Name = tabName .. "_Content"
     contentFrame.BackgroundColor3 = COLORS.Background
@@ -248,14 +247,14 @@ function GamesenseUI:CreateTab(options)
     contentFrame.LayoutOrder = layoutOrder -- Match button order
     contentFrame.Parent = window._contentContainer
 
-    -- Add layout for elements within this tab's content
+    -- Add layout
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.FillDirection = Enum.FillDirection.Vertical
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Padding = UDim.new(0, PADDING * 2) -- More padding for content
     contentLayout.Parent = contentFrame
 
-    -- 2. Create Tab Button (using TextButton for now, ImageButton later if icons needed)
+    -- 2. Create Tab Button
     local tabButton = Instance.new("TextButton")
     tabButton.Name = tabName .. "_Button"
     tabButton.Text = tabName -- Use text for now
@@ -276,26 +275,20 @@ function GamesenseUI:CreateTab(options)
         Button = tabButton,
         Content = contentFrame,
         Layout = contentLayout,
-        Elements = {} -- Store elements created within this tab
+        Elements = {}
     }
     window._tabs[tabName] = tabData
 
     -- 4. Add Click Logic
     tabButton.MouseButton1Click:Connect(function()
-        activateTab(tabData) -- Use the helper function
+        activateTabLogic(tabData) -- Clicking works fine
     end)
 
-    -- Activate the first tab created by default
-    if #window._tabs == 1 then -- Check if this is the first tab added (count will be 1 after adding)
-        activateTab(tabData) -- Activate this first tab directly
-    end
-
-    -- Return a 'tab' object for adding elements
+    -- Return a 'tab' object
     local tabObject = {}
-    setmetatable(tabObject, { __index = GamesenseUI }) -- Inherit methods like CreateSection
+    setmetatable(tabObject, { __index = GamesenseUI })
     tabObject._window = window
     tabObject._tabData = tabData
-    -- Add methods like CreateButton to tabObject later (or inherit them via metatable)
 
     return tabObject
 end
@@ -749,5 +742,45 @@ GamesenseUI.CreateTab = GamesenseUI.CreateTab
 -- Add the CreateSection method to the main GamesenseUI table
 GamesenseUI.CreateSection = GamesenseUI.CreateSection
 
+--[[ NEW METHOD
+    Activates a specific tab by its name.
+    Args:
+        tabName (string): The exact name of the tab to activate.
+--]]
+function GamesenseUI:SetActiveTab(tabName)
+    local window = self
+    local tabDataToActivate = window._tabs[tabName]
+
+    if not tabDataToActivate then
+        warn("SetActiveTab: Tab with name '" .. tostring(tabName) .. "' not found.")
+        return
+    end
+
+    -- Use the same internal logic as clicking
+    -- Re-defining the helper here just for clarity, or make it accessible differently
+     local function activateTabLogic(tabDataInternal)
+        if not tabDataInternal then return end
+        if window._activeTab then
+            window._activeTab.Button.TextColor3 = COLORS.TextDisabled
+            window._activeTab.Button.BackgroundColor3 = COLORS.Frame
+            window._activeTab.Content.Visible = false
+        end
+        tabDataInternal.Button.TextColor3 = COLORS.Accent
+        tabDataInternal.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        tabDataInternal.Content.Visible = true
+        window._activeTab = tabDataInternal
+    end
+
+    activateTabLogic(tabDataToActivate)
+end
+
+-- Assign methods to the main table
+GamesenseUI.CreateTab = GamesenseUI.CreateTab
+GamesenseUI.CreateSection = GamesenseUI.CreateSection
+GamesenseUI.CreateToggle = GamesenseUI.CreateToggle
+GamesenseUI.CreateSlider = GamesenseUI.CreateSlider
+GamesenseUI.CreateButton = GamesenseUI.CreateButton
+GamesenseUI.CreateTextbox = GamesenseUI.CreateTextbox
+GamesenseUI.SetActiveTab = GamesenseUI.SetActiveTab -- Assign the new method
 
 return GamesenseUI
