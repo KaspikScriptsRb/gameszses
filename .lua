@@ -245,14 +245,10 @@ function GamesenseUI:CreateTab(options)
         if window._activeTab then
             -- Deactivate previous: Reset background color
             window._activeTab.Button.BackgroundColor3 = COLORS.Frame
-            -- Optionally change ImageColor3 for inactive state if needed
-            -- window._activeTab.Button.ImageColor3 = COLORS.TextDisabled
             window._activeTab.Content.Visible = false
         end
         -- Activate this tab: Set accent background color
         tabDataToActivate.Button.BackgroundColor3 = COLORS.Border -- Use border color for active background
-        -- Optionally change ImageColor3 for active state
-        -- tabDataToActivate.Button.ImageColor3 = COLORS.Accent
         tabDataToActivate.Content.Visible = true
         window._activeTab = tabDataToActivate
     end
@@ -284,7 +280,6 @@ function GamesenseUI:CreateTab(options)
     tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
     tabButton.BorderSizePixel = 0
     tabButton.Image = "rbxassetid://" .. tostring(iconId)
-    -- tabButton.ImageColor3 = COLORS.TextDisabled -- Default image color (can be white/grey)
     tabButton.ScaleType = Enum.ScaleType.Fit -- Fit the icon within the button
     tabButton.AutoButtonColor = false
     tabButton.LayoutOrder = layoutOrder
@@ -903,12 +898,10 @@ function GamesenseUI:SetActiveTab(tabName)
      local function activateTabLogic(tabDataInternal)
         if not tabDataInternal then return end
         if window._activeTab then
-            window._activeTab.Button.TextColor3 = COLORS.TextDisabled
             window._activeTab.Button.BackgroundColor3 = COLORS.Frame
             window._activeTab.Content.Visible = false
         end
-        tabDataInternal.Button.TextColor3 = COLORS.Accent
-        tabDataInternal.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        tabDataInternal.Button.BackgroundColor3 = COLORS.Border -- Use border color for active background
         tabDataInternal.Content.Visible = true
         window._activeTab = tabDataInternal
     end
