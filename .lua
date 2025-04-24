@@ -89,6 +89,33 @@ local function enableDragging(guiObject, mainFrame)
     end)
 end
 
+-- Internal helper function to activate a tab (now accepts window object)
+local function _activateTabLogic(window, tabDataToActivate)
+    if not window or not tabDataToActivate then
+        warn("_activateTabLogic error: Invalid arguments")
+        return
+    end
+
+    if window._activeTab then
+        -- Deactivate previous
+        if window._activeTab.Button and window._activeTab.Button.Parent then
+            window._activeTab.Button.BackgroundColor3 = COLORS.Frame
+        end
+        if window._activeTab.Content and window._activeTab.Content.Parent then
+             window._activeTab.Content.Visible = false
+        end
+    end
+
+    -- Activate new
+    if tabDataToActivate.Button and tabDataToActivate.Button.Parent then
+        tabDataToActivate.Button.BackgroundColor3 = COLORS.Border
+    end
+    if tabDataToActivate.Content and tabDataToActivate.Content.Parent then
+         tabDataToActivate.Content.Visible = true
+    end
+    window._activeTab = tabDataToActivate
+end
+
 --[[
     Creates the main UI window.
     Args:
@@ -102,13 +129,24 @@ function GamesenseUI:CreateWindow(options)
 
     options = options or {}
     local windowName = options.Name or "GamesenseUI"
+    local screenGuiName = windowName .. "_ScreenGui"
+
+    -- << NEW: Check for and remove existing UI >>
+    local coreGui = game:GetService("CoreGui")
+    local existingGui = coreGui:FindFirstChild(screenGuiName)
+    if existingGui then
+        print("GamesenseUI: Removing existing UI instance.")
+        existingGui:Destroy()
+    end
+    -- << END NEW >>
+
     local windowSize = options.Size or UDim2.new(0, 500, 0, 350)
     local windowPosition = options.Position or UDim2.new(0.5, -windowSize.X.Offset / 2, 0.5, -windowSize.Y.Offset / 2) -- Center by default
     local SIDEBAR_WIDTH = 60 -- Width for the left sidebar
 
     -- 1. Create ScreenGui
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = windowName .. "_ScreenGui"
+    screenGui.Name = screenGuiName -- Use the defined name
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Use Sibling for easier layering
 
@@ -216,7 +254,7 @@ function GamesenseUI:CreateWindow(options)
     window._activeTab = nil
 
     -- Add parent setting last
-    screenGui.Parent = game:GetService("CoreGui") -- Add to CoreGui for executors
+    screenGui.Parent = coreGui
 
     -- Define methods for the window object here (like CreateTab)
 
@@ -238,20 +276,6 @@ function GamesenseUI:CreateTab(options)
     local tabName = options.Name or "Tab" .. (#window._tabs + 1)
     local iconId = options.Icon or "4483362458" -- Default Icon ID
     local layoutOrder = options.Order or #window._tabs + 1
-
-    -- Internal helper function to activate a tab
-    local function activateTabLogic(tabDataToActivate)
-        if not tabDataToActivate then return end
-        if window._activeTab then
-            -- Deactivate previous: Reset background color
-            window._activeTab.Button.BackgroundColor3 = COLORS.Frame
-            window._activeTab.Content.Visible = false
-        end
-        -- Activate this tab: Set accent background color
-        tabDataToActivate.Button.BackgroundColor3 = COLORS.Border -- Use border color for active background
-        tabDataToActivate.Content.Visible = true
-        window._activeTab = tabDataToActivate
-    end
 
     -- 1. Create Content Frame
     local contentFrame = Instance.new("Frame")
@@ -298,7 +322,7 @@ function GamesenseUI:CreateTab(options)
 
     -- 4. Add Click Logic
     tabButton.MouseButton1Click:Connect(function()
-        activateTabLogic(tabData)
+        _activateTabLogic(window, tabData) -- Call the external helper
     end)
 
     -- Return a 'tab' object
@@ -893,20 +917,8 @@ function GamesenseUI:SetActiveTab(tabName)
         return
     end
 
-    -- Use the same internal logic as clicking
-    -- Re-defining the helper here just for clarity, or make it accessible differently
-     local function activateTabLogic(tabDataInternal)
-        if not tabDataInternal then return end
-        if window._activeTab then
-            window._activeTab.Button.BackgroundColor3 = COLORS.Frame
-            window._activeTab.Content.Visible = false
-        end
-        tabDataInternal.Button.BackgroundColor3 = COLORS.Border -- Use border color for active background
-        tabDataInternal.Content.Visible = true
-        window._activeTab = tabDataInternal
-    end
-
-    activateTabLogic(tabDataToActivate)
+    -- Call the external helper function
+    _activateTabLogic(window, tabDataToActivate)
 end
 
 -- Assign methods to the main table
