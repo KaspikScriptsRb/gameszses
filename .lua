@@ -56,6 +56,7 @@ local function enableDragging(guiObject)
 
     guiObject.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            print("Drag InputBegan on TitleBar!") -- DEBUG PRINT
             dragging = true
             dragStart = input.Position
             startPos = guiObject.Position
@@ -221,6 +222,21 @@ function GamesenseUI:CreateTab(options)
     local tabIcon = options.Icon -- For future use
     local layoutOrder = options.Order or #window._tabs + 1 -- Controls vertical order
 
+    -- Helper function to activate a tab
+    local function activateTab(tabDataToActivate)
+        -- Deactivate previously active tab
+        if window._activeTab then
+            window._activeTab.Button.TextColor3 = COLORS.TextDisabled
+            window._activeTab.Button.BackgroundColor3 = COLORS.Frame
+            window._activeTab.Content.Visible = false
+        end
+        -- Activate this tab
+        tabDataToActivate.Button.TextColor3 = COLORS.Accent
+        tabDataToActivate.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        tabDataToActivate.Content.Visible = true
+        window._activeTab = tabDataToActivate
+    end
+
     -- 1. Create Content Frame (initially hidden)
     local contentFrame = Instance.new("Frame")
     contentFrame.Name = tabName .. "_Content"
@@ -266,25 +282,12 @@ function GamesenseUI:CreateTab(options)
 
     -- 4. Add Click Logic
     tabButton.MouseButton1Click:Connect(function()
-        -- Deactivate previously active tab
-        if window._activeTab then
-            window._activeTab.Button.TextColor3 = COLORS.TextDisabled
-            -- Potentially change background color for inactive state too
-             window._activeTab.Button.BackgroundColor3 = COLORS.Frame
-            window._activeTab.Content.Visible = false
-        end
-
-        -- Activate this tab
-        tabButton.TextColor3 = COLORS.Accent -- Highlight active tab text (use accent color)
-        -- Potentially change background color for active state
-         tabButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45) -- Slightly lighter frame
-        contentFrame.Visible = true
-        window._activeTab = tabData
+        activateTab(tabData) -- Use the helper function
     end)
 
     -- Activate the first tab created by default
-    if not window._activeTab then
-        tabButton:Activated() -- Trigger the click logic
+    if #window._tabs == 1 then -- Check if this is the first tab added (count will be 1 after adding)
+        activateTab(tabData) -- Activate this first tab directly
     end
 
     -- Return a 'tab' object for adding elements
