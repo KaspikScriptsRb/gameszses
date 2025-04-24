@@ -307,14 +307,15 @@ function GamesenseUI:CreateTab(options)
     tabButton.Text = tabName -- Use Name for text
     tabButton.Size = UDim2.new(1, -PADDING * 2, 0, 30) -- Adjusted size for text
     -- Position handled by layout
-    tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
-    tabButton.BorderSizePixel = 0
-    tabButton.TextColor3 = COLORS.TextDisabled -- Inactive text color
+    tabButton.BackgroundColor3 = Color3.new(1, 0, 0) -- DEBUG: Bright Red Background
+    tabButton.BorderSizePixel = 1 -- DEBUG: Add border to see edges
+    tabButton.BorderColor3 = Color3.new(1,1,0) -- DEBUG: Yellow Border
+    tabButton.TextColor3 = Color3.new(1, 1, 1) -- DEBUG: White Text
     tabButton.Font = FONTS.Primary
     tabButton.TextSize = 12 -- Smaller text for sidebar tabs
     tabButton.AutoButtonColor = false
     tabButton.LayoutOrder = layoutOrder
-    tabButton.ZIndex = window._sidebarFrame.ZIndex + 1
+    tabButton.ZIndex = window._sidebarFrame.ZIndex + 2 -- DEBUG: Increase ZIndex just in case
     tabButton.Parent = window._sidebarFrame
 
     -- 3. Store Tab Info
@@ -331,6 +332,20 @@ function GamesenseUI:CreateTab(options)
     tabButton.MouseButton1Click:Connect(function()
         _activateTabLogic(window, tabData) -- Call the external helper
     end)
+
+    -- << DEBUG PRINTING >>
+    task.wait(0.1) -- Wait a short moment for layout to potentially calculate
+    print(string.format("Created Tab Button: Name='%s', Parent='%s', Visible=%s, Size=(%.1f, %.1f), AbsPos=(%.1f, %.1f), AbsSize=(%.1f, %.1f), ZIndex=%d",
+        tabButton.Name,
+        tabButton.Parent and tabButton.Parent.Name or "NIL",
+        tostring(tabButton.Visible),
+        tabButton.Size.X.Offset, tabButton.Size.Y.Offset, -- Assuming Offset is used for size
+        tabButton.AbsolutePosition.X, tabButton.AbsolutePosition.Y,
+        tabButton.AbsoluteSize.X, tabButton.AbsoluteSize.Y,
+        tabButton.ZIndex
+    ))
+    print("SidebarFrame AbsSize:", window._sidebarFrame.AbsoluteSize.X, window._sidebarFrame.AbsoluteSize.Y)
+    -- << END DEBUG PRINTING >>
 
     -- Return tab object
     local tabObject = {}
