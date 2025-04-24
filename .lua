@@ -229,8 +229,9 @@ function GamesenseUI:CreateWindow(options)
     local sidebarLayout = Instance.new("UIListLayout")
     sidebarLayout.FillDirection = Enum.FillDirection.Vertical
     sidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    sidebarLayout.Padding = UDim.new(0, ELEMENT_SPACING) -- Use consistent spacing
-    sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- Align elements left
+    sidebarLayout.Padding = UDim.new(0, ELEMENT_SPACING)
+    sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center -- Center horizontally
+    sidebarLayout.VerticalAlignment = Enum.VerticalAlignment.Top     -- Align to top
     sidebarLayout.Parent = sidebarFrame
 
     -- 6. Create Content Container (Adjusted for Sidebar)
@@ -299,11 +300,14 @@ function GamesenseUI:CreateTab(options)
     -- 2. Create Tab Button (CHANGED TO ImageButton)
     local tabButton = Instance.new("ImageButton")
     tabButton.Name = tabName .. "_Button"
-    tabButton.Size = UDim2.new(1, -PADDING * 2, 0, window._sidebarFrame.Size.X.Offset - PADDING * 2) -- Make it square-ish
+    -- FIXED SIZE for the icon button
+    local iconSize = 40 -- Define a fixed size for icons
+    tabButton.Size = UDim2.new(0, iconSize, 0, iconSize)
+    -- Position is handled by UIListLayout
     tabButton.BackgroundColor3 = COLORS.Frame -- Inactive background
     tabButton.BorderSizePixel = 0
     tabButton.Image = "rbxassetid://" .. tostring(iconId)
-    tabButton.ScaleType = Enum.ScaleType.Fit -- Fit the icon within the button
+    tabButton.ScaleType = Enum.ScaleType.Fit
     tabButton.AutoButtonColor = false
     tabButton.LayoutOrder = layoutOrder
     tabButton.ZIndex = window._sidebarFrame.ZIndex + 1
